@@ -1,0 +1,21 @@
+{
+  "name": "docker-watcher",
+  "version": "1.0.0",
+  "description": "",
+  "main": "watcher.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "docker",
+    "events",
+    "nginx.conf"
+  ],
+  "author": "Grzegorz Godlewski <gg@gitgis.com>",
+  "license": "MIT",
+  "dependencies": {
+    "docker-events": "0.0.2",
+    "nunjucks": "^1.3.4",
+    "q": "^1.4.1"
+  }
+}

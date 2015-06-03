@@ -1,0 +1,31 @@
+#!/usr/bin/ansible-playbook
+---
+- name: Automated nginx-proxy
+  hosts: dev
+  sudo: yes
+
+  tasks:
+  - name: Build docker image
+    raw: docker build -t "{{ docker_image }}" {{ maindir }}/docker
+
+  - name: Remove docker
+    command: "{{ item }}"
+    ignore_errors: yes
+    with_items:
+      - docker stop {{ docker_container }}
+      - docker rm -f {{ docker_container }}
+
+  - name: Run docker container
+    docker:
+      image="{{ docker_image }}"
+      name="{{ docker_container }}"
+      state=running
+      restart_policy=always
+      volumes="/var/run/docker.sock:/var/run/docker.sock,/tmp/nginx:/etc/nginx/conf.d,/data/ssl_cert:/etc/nginx/certs,/data/_logs/{{ docker_container }}:/var/log/nginx"
+      env="LOG=nginx"
+      ports="80:80,443:443"
+
+  vars:
+    docker_image: gitgis/nginx-proxy
+    docker_container: nginx-proxy
+    maindir: "{{playbook_dir}}/../"

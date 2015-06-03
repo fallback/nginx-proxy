@@ -1,0 +1,2 @@
+watcher: /app/docker-watcher/watcher.js
+nginx: while [ true ]; do nginx; sleep 5; done
