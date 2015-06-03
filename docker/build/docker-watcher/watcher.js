@@ -44,7 +44,7 @@ var getVirtuals = function () {
         var promises = [];
 
         if (err) {
-            return deffered.reject(err);
+            return deferred.reject(err);
         }
 
         containers.forEach(function (container) {
@@ -146,9 +146,13 @@ var getVirtuals = function () {
 };
 
 var regenerate = function () {
-    getVirtuals().then(function (virtuals) {
-        generateNginx(config, virtuals);
-    });
+    getVirtuals()
+        .then(function (virtuals) {
+            generateNginx(config, virtuals);
+        })
+        .catch(function (err) {
+            console.error(err);
+        });
 };
 
 regenerate();
