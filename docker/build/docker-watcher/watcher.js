@@ -23,8 +23,8 @@ var generateNginx = function (config, virtuals) {
 
 
     for (var virtualKey in virtuals) {
-        console.log("Generating: "+config['conf_dir']+'/'+virtual['host']+'.generated.conf');
         var virtual = virtuals[virtualKey];
+        console.log("Generating: "+config['conf_dir']+'/'+virtual['host']+'.generated.conf');
         fs.writeFileSync(
             config['conf_dir']+'/'+virtual['host']+'.generated.conf',
             nunjucks.render('virtual.conf.twig', {'virtual': virtual})
