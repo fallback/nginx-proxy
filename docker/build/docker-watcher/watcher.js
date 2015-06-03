@@ -43,6 +43,10 @@ var getVirtuals = function () {
     docker.listContainers(function (err, containers) {
         var promises = [];
 
+        if (err) {
+            return deffered.reject(err);
+        }
+
         containers.forEach(function (container) {
             var container = docker.getContainer(container.Id);
 
