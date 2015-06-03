@@ -71,7 +71,7 @@ var getVirtuals = function () {
             .all(promises)
             .then(function (containers) {
 
-                var virtuals = [];
+                var virtuals = {};
                 containers.forEach(function (container) {
                     var env = {};
 
