@@ -10,7 +10,7 @@ var Docker = require('dockerode');
 var nunjucks = require('nunjucks');
 var child_process = require('child_process');
 
-var docker = new Docker();
+var docker = new Docker({socketPath: '/tmp/docker.sock'});
 var emitter = new DockerEvents({
     docker: docker
 });
@@ -21,7 +21,9 @@ var generateNginx = function (config, virtuals) {
 
     fs.createReadStream(config['tmpl_dir']+'/default.conf').pipe(fs.createWriteStream(config['conf_dir']+'/default.conf'));
 
+
     for (var virtualKey in virtuals) {
+        console.log("Generating: "+config['conf_dir']+'/'+virtual['host']+'.generated.conf');
         var virtual = virtuals[virtualKey];
         fs.writeFileSync(
             config['conf_dir']+'/'+virtual['host']+'.generated.conf',
@@ -29,7 +31,9 @@ var generateNginx = function (config, virtuals) {
         );
     }
 
+    console.log("Restarting nginx");
     child_process.exec('nginx -s reload', function(error, stdout, stderr){
+
         if (error) {
             console.error(error);
         }
@@ -146,6 +150,7 @@ var getVirtuals = function () {
 };
 
 var regenerate = function () {
+    console.log("Regenerate");
     getVirtuals()
         .then(function (virtuals) {
             generateNginx(config, virtuals);

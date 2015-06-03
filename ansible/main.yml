@@ -21,7 +21,7 @@
       name="{{ docker_container }}"
       state=running
       restart_policy=always
-      volumes="/var/run/docker.sock:/var/run/docker.sock,/tmp/nginx:/etc/nginx/conf.d,/data/ssl_cert:/etc/nginx/certs,/data/_logs/{{ docker_container }}:/var/log/nginx"
+      volumes="/var/run/docker.sock:/tmp/docker.sock,/tmp/nginx:/etc/nginx/conf.d,/data/ssl_cert:/etc/nginx/certs,/data/_logs/{{ docker_container }}:/var/log/nginx"
       env="LOG=nginx"
       ports="80:80,443:443"
 
