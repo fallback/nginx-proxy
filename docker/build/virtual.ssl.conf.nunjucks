@@ -25,6 +25,7 @@ server {
         proxy_pass http://upstream_{{ virtual.host }}{{ path | replace('/', '_') }};
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto https;
     }
 {% endfor %}
 }
