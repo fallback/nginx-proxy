@@ -27,4 +27,7 @@ RUN apt-get clean && rm -r /var/lib/apt/lists/*
 # Install docker-watcher
 RUN cd /app/docker-watcher && npm install
 
+EXPOSE 80
+EXPOSE 443
+
 CMD ["forego", "start"]
