@@ -1,9 +1,12 @@
-FROM nginx:1.9.1
+FROM nginx:stable
 MAINTAINER Grzegorz Godlewski gg@gitgis.com
 
 # Install wget and install/updates certificates
-RUN apt-get update && \
-  apt-get install -y -q --no-install-recommends ca-certificates wget nodejs npm
+RUN apt-get update
+RUN apt-get install -y -q --no-install-recommends ca-certificates gnupg wget curl
+
+RUN curl -sL https://deb.nodesource.com/setup_6.x | bash -
+RUN apt-get install -y -q nodejs npm
 
 # Configure Nginx and apply fix for long server names
 ADD build/nginx.conf /etc/nginx/nginx.conf
@@ -15,11 +18,13 @@ WORKDIR /app/
 VOLUME ["/etc/nginx/certs", "/etc/nginx/conf.d", "/var/log"]
 
 # Install Forego
-RUN wget -P /usr/local/bin https://godist.herokuapp.com/projects/ddollar/forego/releases/current/linux-amd64/forego \
- && chmod u+x /usr/local/bin/forego
+RUN wget https://bin.equinox.io/c/ekMN3bCZFUn/forego-stable-linux-amd64.tgz
+RUN tar xvf forego-stable-linux-amd64.tgz -C /usr/local/bin
 
-RUN cd /app/docker-watcher && npm install
-
+RUN apt-get remove -y -q gnupg wget curl
 RUN apt-get clean && rm -r /var/lib/apt/lists/*
 
-CMD ["forego", "start", "-r"]
+# Install docker-watcher
+RUN cd /app/docker-watcher && npm install
+
+CMD ["forego", "start"]

@@ -1,34 +1,53 @@
 #!/usr/bin/nodejs
 'use strict';
 
-var config = require('./config');
+const config = {
+    'tmpl_dir': process.env.TMPL_DIR || '/app',
+    'conf_dir': process.env.NGINX_CONF_DIR || '/etc/nginx/conf.d'
+};
 
-var fs = require('fs');
-var Q = require('q');
-var DockerEvents = require('docker-events');
-var Docker = require('dockerode');
-var nunjucks = require('nunjucks');
-var child_process = require('child_process');
+const fs = require('fs');
+const DockerEvents = require('docker-events');
+const Docker = require('dockerode');
+const nunjucks = require('nunjucks');
+const child_process = require('child_process');
+const glob = require("glob");
 
-var docker = new Docker({socketPath: '/tmp/docker.sock'});
-var emitter = new DockerEvents({
+const docker = new Docker({socketPath: '/tmp/docker.sock'});
+const emitter = new DockerEvents({
     docker: docker
 });
 
 nunjucks.configure(config['tmpl_dir'], { autoescape: true });
 
-var generateNginx = function (config, virtuals) {
-
+const generateNginx = (config, virtuals) => {
     fs.createReadStream(config['tmpl_dir']+'/default.conf').pipe(fs.createWriteStream(config['conf_dir']+'/default.conf'));
 
+    glob(config['conf_dir']+'/*.generated.conf', function (er, files) {
+        files.forEach((fileName) => {
+            fs.unlinkSync(fileName);
+        })
+    });
 
-    for (var virtualKey in virtuals) {
-        var virtual = virtuals[virtualKey];
-        console.log("Generating: "+config['conf_dir']+'/'+virtual['host']+'.generated.conf');
-        fs.writeFileSync(
-            config['conf_dir']+'/'+virtual['host']+'.generated.conf',
-            nunjucks.render('virtual.conf.twig', {'virtual': virtual})
-        );
+    for (let virtualKey in virtuals) {
+        const virtual = virtuals[virtualKey];
+
+        const generatedConfig = config['conf_dir']+'/'+virtual['host'].replace(/\//gi, '_')+'.generated.conf';
+
+        console.log("Generating: "+generatedConfig);
+        // console.log("Generating: "+generatedConfig, virtual['host'], virtual['paths']);
+
+        if (virtual['CERT_NAME']) {
+            fs.writeFileSync(
+                generatedConfig,
+                nunjucks.render('virtual.ssl.conf.nunjucks', {'virtual': virtual})
+            );
+        } else {
+            fs.writeFileSync(
+                generatedConfig,
+                nunjucks.render('virtual.conf.nunjucks', {'virtual': virtual})
+            );
+        }
     }
 
     console.log("Restarting nginx");
@@ -41,140 +60,135 @@ var generateNginx = function (config, virtuals) {
     });
 };
 
-var getVirtuals = function () {
-    var deferred = Q.defer();
+const getVirtuals = () => {
+    return new Promise((resolve, reject) => {
+        docker.listContainers((err, listedContainers) => {
+            const promises = [];
 
-    docker.listContainers(function (err, containers) {
-        var promises = [];
+            if (err) {
+                return reject(err);
+            }
 
-        if (err) {
-            return deferred.reject(err);
-        }
+            listedContainers.forEach((listedContainer) => {
+                const dockerContainer = docker.getContainer(listedContainer.Id);
 
-        containers.forEach(function (container) {
-            var container = docker.getContainer(container.Id);
+                promises.push(new Promise((resolve, reject) => {
+                    dockerContainer.inspect((err, inspectedContainer) => {
+                        if (err) {
+                            return reject(err);
+                        }
 
-            var deferred = Q.defer();
-
-            container.inspect(function (err, container) {
-                if (err) {
-                    return deferred.reject(err);
-                }
-
-                deferred.resolve(container);
+                        resolve(inspectedContainer);
+                    });
+                }));
             });
 
-            promises.push(deferred.promise);
-        });
+            Promise
+                .all(promises)
+                .then((inspectedContainers) => {
 
-        Q
-            .all(promises)
-            .then(function (containers) {
+                    const virtuals = {};
+                    inspectedContainers.forEach((inspectedContainer) => {
+                        const env = {};
 
-                var virtuals = {};
-                containers.forEach(function (container) {
-                    var env = {};
+                        inspectedContainer.Config.Env.forEach((row) => {
+                            const idx = row.indexOf('=');
+                            env[row.substr(0, idx)] = row.substr(idx + 1);
+                        });
 
-                    container.Config.Env.forEach(function (row) {
-                        var idx = row.indexOf('=');
-                        env[row.substr(0, idx)] = row.substr(idx + 1);
+                        if (env['VIRTUAL_URL']) {
+                            let host, path;
+                            let idx = env['VIRTUAL_URL'].indexOf('/');
+                            if (idx < 0) {
+                                host = env['VIRTUAL_URL'];
+                                path = '/';
+                            } else {
+                                host = env['VIRTUAL_URL'].substr(0, idx);
+                                path = env['VIRTUAL_URL'].substr(idx);
+                            }
+
+                            if (!virtuals[host]) {
+                                virtuals[host] = {};
+                                virtuals[host]['host'] = host;
+                                virtuals[host]['containers'] = [];
+                                virtuals[host]['paths'] = {};
+                            }
+
+                            if (env['CERT_NAME']) {
+                                try {
+                                    const stats = fs.lstatSync('/etc/nginx/certs/'+env['CERT_NAME']+'.crt');
+                                    if (stats.isFile()) {
+                                        virtuals[host]['CERT_NAME'] = env['CERT_NAME'];
+                                    }
+                                } catch (err) {
+                                }
+                            }
+
+                            if (!env['VIRTUAL_PORT']) {
+                                const ports = [];
+
+                                for (let key in inspectedContainer.Config.ExposedPorts) {
+                                    key = key.split('/');
+                                    if (key[1] != 'tcp') continue;
+                                    ports.push({
+                                        PublicPort: key[0]
+                                    })
+                                }
+                                if (1 == ports.length && (ports[0]['PublicPort'])) {
+                                    env['VIRTUAL_PORT'] = ports[0]['PublicPort'];
+                                }
+                            }
+                            if (!env['VIRTUAL_PORT']) {
+                                env['VIRTUAL_PORT'] = 80;
+                            }
+
+                            if (!virtuals[host]['paths'][path]) {
+                                virtuals[host]['paths'][path] = [];
+                            }
+                            inspectedContainer.Env = env;
+
+                            virtuals[host]['paths'][path].push(inspectedContainer);
+                            virtuals[host]['containers'].push(inspectedContainer);
+                        }
+
                     });
 
-                    if (env['VIRTUAL_URL']) {
-                        var host, path;
-                        var idx = ['VIRTUAL_URL'].indexOf('/');
-                        if (idx == -1) {
-                            host = env['VIRTUAL_URL'];
-                            path = '/';
-                        } else {
-                            host = env['VIRTUAL_URL'].substr(0, idx);
-                            path = env['VIRTUAL_URL'].substr(idx);
-                        }
+                    resolve(virtuals);
+                })
+                .catch((err) => {
+                    reject(err);
+                })
 
-                        if (!virtuals[host]) {
-                            virtuals[host] = {};
-                            virtuals[host]['host'] = host;
-                            virtuals[host]['containers'] = [];
-                            virtuals[host]['paths'] = {};
-                        }
-
-                        if (env['CERT_NAME']) {
-                            try {
-                                var stats = fs.lstatSync('/etc/nginx/certs/'+env['CERT_NAME']+'.crt');
-                                if (stats.isFile()) {
-                                    virtuals[host]['CERT_NAME'] = env['CERT_NAME'];
-                                }
-                            } catch (err) {
-                            }
-                        }
-
-                        if (!env['VIRTUAL_PORT']) {
-                            var ports = [];
-
-                            for (var key in container.Config.ExposedPorts) {
-                                key = key.split('/');
-                                if (key[1] != 'tcp') continue;
-                                ports.push({
-                                    PublicPort: key[0]
-                                })
-                            }
-                            if (1 == ports.length && (ports[0]['PublicPort'])) {
-                                env['VIRTUAL_PORT'] = ports[0]['PublicPort'];
-                            }
-                        }
-                        if (!env['VIRTUAL_PORT']) {
-                            env['VIRTUAL_PORT'] = 80;
-                        }
-
-                        env['VIRTUAL_PATH'] = path;
-                        if (!virtuals[host]['paths'][path]) {
-                            virtuals[host]['paths'][path] = [];
-                        }
-                        container.Env = env;
-
-                        virtuals[host]['paths'][path].push(container);
-                        virtuals[host]['containers'].push(container);
-                    }
-
-                });
-
-                deferred.resolve(virtuals);
-            })
-            .catch(function (err) {
-                deferred.reject(err);
-            })
-
+        });
     });
-
-    return deferred.promise;
 };
 
-var regenerate = function () {
+const regenerate = () => {
     console.log("Regenerate");
     getVirtuals()
-        .then(function (virtuals) {
+        .then((virtuals) => {
             generateNginx(config, virtuals);
         })
-        .catch(function (err) {
+        .catch((err) => {
             console.error(err);
         });
 };
 
 regenerate();
 
-emitter.on("create", function(message) {
+emitter.on("create", () => {
     regenerate();
 });
-emitter.on("start", function(message) {
+emitter.on("start", () => {
     regenerate();
 });
-emitter.on("stop", function(message) {
+emitter.on("stop", () => {
     regenerate();
 });
-emitter.on("die", function(message) {
+emitter.on("die", () => {
     regenerate();
 });
-emitter.on("destroy", function(message) {
+emitter.on("destroy", () => {
     regenerate();
 });
 

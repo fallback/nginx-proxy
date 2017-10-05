@@ -29,7 +29,7 @@ docker run -e VIRTUAL_URL=example.com/api VIRTUAL_PORT=8080 ... #container_with_
 SSL certificates
 -----
 
-Put certificatess into:
+Put certificates into:
 ```
 /data/ssl_cert/example.com.crt
 /data/ssl_cert/example.com.key

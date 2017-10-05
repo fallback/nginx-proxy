@@ -1,29 +1,44 @@
 #!/usr/bin/ansible-playbook
 ---
 - name: Automated nginx-proxy
-  hosts: dev
-  sudo: yes
+  hosts: localhost
 
   tasks:
   - name: Build docker image
-    raw: docker build -t "{{ docker_image }}" {{ maindir }}/docker
+    become_user: root
+    docker_image:
+      path: "{{ maindir }}/docker"
+      name: "{{ docker_image }}"
+      force: yes
 
-  - name: Remove docker
+  - name: Check "{{ docker_container }}" docker
+    command: docker inspect {{ docker_container }}
+    register: result_docker
+    ignore_errors: True
+
+  - name: Stop docker container
     command: "{{ item }}"
-    ignore_errors: yes
     with_items:
       - docker stop {{ docker_container }}
       - docker rm -f {{ docker_container }}
+    when: result_docker|success
 
   - name: Run docker container
-    docker:
-      image="{{ docker_image }}"
-      name="{{ docker_container }}"
-      state=running
-      restart_policy=always
-      volumes="/var/run/docker.sock:/tmp/docker.sock,/tmp/nginx:/etc/nginx/conf.d,/data/ssl_cert:/etc/nginx/certs,/data/_logs/{{ docker_container }}:/var/log/nginx"
-      env="LOG=nginx"
-      ports="80:80,443:443"
+    docker_container:
+      image: "{{ docker_image }}"
+      name: "{{ docker_container }}"
+      state: started
+      restart_policy: always
+      volumes:
+        - "/var/run/docker.sock:/tmp/docker.sock"
+        - "/tmp/nginx:/etc/nginx/conf.d"
+        - "/data/ssl_cert:/etc/nginx/certs"
+        - "/data/_logs/{{ docker_container }}:/var/log/nginx"
+      ports:
+        - "80:80"
+        - "443:443"
+      env:
+        LOG: "nginx"
 
   vars:
     docker_image: gitgis/nginx-proxy
