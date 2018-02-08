@@ -21,7 +21,7 @@ server {
 {% for path, containers in virtual.paths %}
 upstream upstream_{{ virtual.host }}{{ path | replace('/', '_') }} {
 {% for container in containers %}
-	server {{ container.NetworkSettings.IPAddress }}:{{ container.Env.VIRTUAL_PORT }};
+    server {{ container.ip }}:{{ container.Env.VIRTUAL_PORT }};
 {% endfor %}
 }
 {% endfor %}

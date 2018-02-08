@@ -4,6 +4,7 @@
 const config = {
     'tmpl_dir': process.env.TMPL_DIR || '/app',
     'conf_dir': process.env.NGINX_CONF_DIR || '/etc/nginx/conf.d'
+    'network': process.env.NETWORK || '',
 };
 
 const fs = require('fs');
@@ -146,8 +147,16 @@ const getVirtuals = () => {
                             }
                             inspectedContainer.Env = env;
 
-                            virtuals[host]['paths'][path].push(inspectedContainer);
-                            virtuals[host]['containers'].push(inspectedContainer);
+                            if (config['network'] && inspectedContainer.container.NetworkSettings.Networks[config['network']]) {
+                                inspectedContainer.ip = inspectedContainer.container.NetworkSettings.Networks[config['network']].IPAddress;
+                            } else {
+                                inspectedContainer.ip = inspectedContainer.container.NetworkSettings.IPAddress;
+                            }
+
+                            if (inspectedContainer.ip) {
+                                virtuals[host]['paths'][path].push(inspectedContainer);
+                                virtuals[host]['containers'].push(inspectedContainer);
+                            }
                         }
 
                     });
