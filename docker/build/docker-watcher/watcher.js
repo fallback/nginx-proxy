@@ -27,36 +27,35 @@ const generateNginx = (config, virtuals) => {
         files.forEach((fileName) => {
             fs.unlinkSync(fileName);
         })
-    });
 
-    for (let virtualKey in virtuals) {
-        const virtual = virtuals[virtualKey];
+        for (let virtualKey in virtuals) {
+            const virtual = virtuals[virtualKey];
 
-        const generatedConfig = config['conf_dir']+'/'+virtual['host'].replace(/\//gi, '_')+'.generated.conf';
+            const generatedConfig = config['conf_dir']+'/'+virtual['host'].replace(/\//gi, '_')+'.generated.conf';
 
-        console.log("Generating: "+generatedConfig);
-        // console.log("Generating: "+generatedConfig, virtual['host'], virtual['paths']);
+            console.log("Generating: "+generatedConfig);
 
-        if (virtual['CERT_NAME']) {
-            fs.writeFileSync(
-                generatedConfig,
-                nunjucks.render('virtual.ssl.conf.nunjucks', {'virtual': virtual})
-            );
-        } else {
-            fs.writeFileSync(
-                generatedConfig,
-                nunjucks.render('virtual.conf.nunjucks', {'virtual': virtual})
-            );
+            if (virtual['CERT_NAME']) {
+                fs.writeFileSync(
+                    generatedConfig,
+                    nunjucks.render('virtual.ssl.conf.nunjucks', {'virtual': virtual})
+                );
+            } else {
+                fs.writeFileSync(
+                    generatedConfig,
+                    nunjucks.render('virtual.conf.nunjucks', {'virtual': virtual})
+                );
+            }
         }
-    }
 
-    console.log("Restarting nginx");
-    child_process.exec('nginx -s reload', function(error, stdout, stderr){
+        console.log("Restarting nginx");
+        child_process.exec('nginx -s reload', function(error, stdout, stderr){
 
-        if (error) {
-            console.error(error);
-        }
-        console.log(stdout);
+            if (error) {
+                console.error(error);
+            }
+            console.log(stdout);
+        });
     });
 };
 
@@ -164,7 +163,6 @@ const getVirtuals = () => {
 };
 
 const regenerate = () => {
-    console.log("Regenerate");
     getVirtuals()
         .then((virtuals) => {
             generateNginx(config, virtuals);
