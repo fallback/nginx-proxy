@@ -147,10 +147,10 @@ const getVirtuals = () => {
                             }
                             inspectedContainer.Env = env;
 
-                            if (config['network'] && inspectedContainer.container.NetworkSettings.Networks[config['network']]) {
-                                inspectedContainer.ip = inspectedContainer.container.NetworkSettings.Networks[config['network']].IPAddress;
+                            if (config['network'] && inspectedContainer.NetworkSettings.Networks[config['network']]) {
+                                inspectedContainer.ip = inspectedContainer.NetworkSettings.Networks[config['network']].IPAddress;
                             } else {
-                                inspectedContainer.ip = inspectedContainer.container.NetworkSettings.IPAddress;
+                                inspectedContainer.ip = inspectedContainer.NetworkSettings.IPAddress;
                             }
 
                             if (inspectedContainer.ip) {
