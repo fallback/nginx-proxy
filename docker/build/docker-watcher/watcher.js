@@ -3,8 +3,8 @@
 
 const config = {
     'tmpl_dir': process.env.TMPL_DIR || '/app',
-    'conf_dir': process.env.NGINX_CONF_DIR || '/etc/nginx/conf.d'
-    'network': process.env.NETWORK || '',
+    'conf_dir': process.env.NGINX_CONF_DIR || '/etc/nginx/conf.d',
+    'network': process.env.NETWORK || ''
 };
 
 const fs = require('fs');
