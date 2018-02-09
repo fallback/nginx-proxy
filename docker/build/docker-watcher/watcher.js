@@ -96,6 +96,10 @@ const getVirtuals = () => {
                             env[row.substr(0, idx)] = row.substr(idx + 1);
                         });
 
+                        if (!env['VIRTUAL_PROTO']) {
+                            env['VIRTUAL_PROTO'] = 'http';
+                        }
+
                         if (env['VIRTUAL_URL']) {
                             let host, path;
                             let idx = env['VIRTUAL_URL'].indexOf('/');
