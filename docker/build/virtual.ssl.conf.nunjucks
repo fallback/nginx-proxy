@@ -27,7 +27,6 @@ server {
         include /etc/nginx/uwsgi_params.conf;
         uwsgi_pass {{ virtual.VIRTUAL_PROTO }}://upstream_{{ virtual.host }}{{ path | replace('/', '_') }};
     {% elif virtual.VIRTUAL_PROTO == "fastcgi" %}
-        root /var/www/html;
         include /etc/nginx/fastcgi.conf;
         fastcgi_pass upstream_{{ virtual.host }}{{ path | replace('/', '_') }};
     {% else %}
