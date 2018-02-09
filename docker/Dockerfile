@@ -15,7 +15,7 @@ ADD build/default.conf /etc/nginx/conf.d/default.conf
 COPY build /app/
 WORKDIR /app/
 
-VOLUME ["/etc/nginx/certs", "/etc/nginx/conf.d", "/var/log"]
+VOLUME ["/etc/nginx/certs", "/etc/nginx/conf.d", "/etc/nginx/conf.docker", "/var/log"]
 
 # Install Forego
 RUN wget https://bin.equinox.io/c/ekMN3bCZFUn/forego-stable-linux-amd64.tgz
