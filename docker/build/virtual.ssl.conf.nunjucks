@@ -23,19 +23,19 @@ server {
 {% for path, containers in virtual.paths %}
     location {{ path }} {
 
-    {% if container.Env.VIRTUAL_PROTO == "uwsgi" %}
-        # include uwsgi_params;
-        uwsgi_pass {{ container.Env.VIRTUAL_PROTO }}://upstream_{{ virtual.host }}{{ path | replace('/', '_') }};
-    {% elif container.Env.VIRTUAL_PROTO == "fastcgi" %}
-        # root /var/www/html;
-        include fastcgi.conf;
+    {% if virtual.VIRTUAL_PROTO == "uwsgi" %}
+        include /etc/nginx/uwsgi_params.conf;
+        uwsgi_pass {{ virtual.VIRTUAL_PROTO }}://upstream_{{ virtual.host }}{{ path | replace('/', '_') }};
+    {% elif virtual.VIRTUAL_PROTO == "fastcgi" %}
+        root /var/www/html;
+        include /etc/nginx/fastcgi.conf;
         fastcgi_pass upstream_{{ virtual.host }}{{ path | replace('/', '_') }};
     {% else %}
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $remote_addr;
         proxy_set_header X-Forwarded-Proto https;
-        proxy_pass {{ container.Env.VIRTUAL_PROTO }}://upstream_{{ virtual.host }}{{ path | replace('/', '_') }};
-    {{ end }}
+        proxy_pass {{ virtual.VIRTUAL_PROTO }}://upstream_{{ virtual.host }}{{ path | replace('/', '_') }};
+    {% endif %}
 
     }
 {% endfor %}

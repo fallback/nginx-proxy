@@ -116,6 +116,7 @@ const getVirtuals = () => {
                                 virtuals[host]['host'] = host;
                                 virtuals[host]['containers'] = [];
                                 virtuals[host]['paths'] = {};
+                                virtuals[host]['VIRTUAL_PROTO'] = env['VIRTUAL_PROTO'];
                             }
 
                             if (env['CERT_NAME']) {
