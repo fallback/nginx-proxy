@@ -11,8 +11,6 @@ RUN apt-get install -y -q nodejs npm
 # Configure Nginx and apply fix for long server names
 ADD build/nginx.conf /etc/nginx/nginx.conf
 ADD build/default.conf /etc/nginx/conf.d/default.conf
-ADD build/fastcgi.conf /etc/nginx/fastcgi.conf
-ADD build/uwsgi_params.conf /etc/nginx/uwsgi_params.conf
 
 COPY build /app/
 WORKDIR /app/

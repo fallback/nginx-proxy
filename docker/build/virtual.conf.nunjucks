@@ -12,11 +12,11 @@ server {
     location {{ path }} {
 
     {% if virtual.VIRTUAL_PROTO == "uwsgi" %}
-        # include uwsgi_params;
+        include /etc/nginx/uwsgi_params;
         uwsgi_pass {{ virtual.VIRTUAL_PROTO }}://upstream_{{ virtual.host }}{{ path | replace('/', '_') }};
     {% elif virtual.VIRTUAL_PROTO == "fastcgi" %}
-        # root /var/www/html;
-        include fastcgi.conf;
+        root /var/www/html;
+        include /etc/nginx/fastcgi_params;
         fastcgi_pass upstream_{{ virtual.host }}{{ path | replace('/', '_') }};
     {% else %}
         proxy_set_header Host $host;
