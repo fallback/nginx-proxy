@@ -1,0 +1,34 @@
+#!/usr/bin/ansible-playbook
+---
+- name: Automated nginx-proxy
+  hosts: localhost
+
+  tasks:
+  - name: Build docker image
+    become_user: root
+    docker_image:
+      path: "{{ maindir }}/docker"
+      name: "{{ docker_image }}"
+      rm: yes
+      force: yes
+
+  - name: Stop docker service
+    command: "{{ item }}"
+    with_items:
+      - docker service rm {{ docker_service }}
+    ignore_errors: true
+
+  - name: Run docker service
+    shell: >
+      docker service create --name "{{ docker_service }}"
+      --replicas 1
+      --network web_servers
+      -p 80:80 -p 443:443
+      --mount type=bind,source=/var/run/docker.sock,destination=/tmp/docker.sock
+      --mount type=bind,source=/data/_logs/{{ docker_service }},destination=/var/log/nginx
+      "{{ docker_image }}"
+
+  vars:
+    docker_image: gitgis/nginx-proxy
+    docker_service: nginx-proxy
+    maindir: "{{playbook_dir}}/../"

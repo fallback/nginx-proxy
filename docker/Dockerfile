@@ -5,7 +5,7 @@ MAINTAINER Grzegorz Godlewski gg@gitgis.com
 RUN apt-get update
 RUN apt-get install -y -q --no-install-recommends ca-certificates gnupg wget curl
 
-RUN curl -sL https://deb.nodesource.com/setup_6.x | bash -
+RUN curl -sL https://deb.nodesource.com/setup_8.x | bash -
 RUN apt-get install -y -q nodejs npm
 
 # Configure Nginx and apply fix for long server names

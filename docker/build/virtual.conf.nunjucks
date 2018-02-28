@@ -8,30 +8,30 @@ server {
     server_name {{ virtual.host }};
     listen 80;
 
-{% for path, containers in virtual.paths %}
+{% for path, path_upstreams in virtual.paths %}
     location {{ path }} {
 
-    {% if virtual.VIRTUAL_PROTO == "uwsgi" %}
-        include /etc/nginx/uwsgi_params;
-        uwsgi_pass {{ virtual.VIRTUAL_PROTO }}://upstream_{{ virtual.host }}{{ path | replace('/', '_') }};
-    {% elif virtual.VIRTUAL_PROTO == "fastcgi" %}
-        include /etc/nginx/fastcgi_params;
-        fastcgi_pass upstream_{{ virtual.host }}{{ path | replace('/', '_') }};
-    {% else %}
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-For $remote_addr;
-        proxy_pass {{ virtual.VIRTUAL_PROTO }}://upstream_{{ virtual.host }}{{ path | replace('/', '_') }};
-    {% endif %}
+    {% for path_upstream in path_upstreams %}
+        {% if path_upstream.proto == "uwsgi" %}
+            include /etc/nginx/uwsgi_params;
+            uwsgi_pass uwsgi://{{ path_upstream.upstream }};
+        {% elif path_upstream.proto == "fastcgi" %}
+            include /etc/nginx/fastcgi_params;
+            fastcgi_pass {{ path_upstream.upstream }};
+        {% else %}
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_pass {{ path_upstream.proto }}://{{ path_upstream.upstream }};
+        {% endif %}
+    {% endfor %}
 
     }
 {% endfor %}
 }
 
 # upstreams
-{% for path, containers in virtual.paths %}
-upstream upstream_{{ virtual.host }}{{ path | replace('/', '_') }} {
-{% for container in containers %}
-    server {{ container.ip }}:{{ container.Env.VIRTUAL_PORT }};
-{% endfor %}
+{% for id, upstream in virtual.upstreams %}
+upstream {{ upstream.name }} {
+    server {{ upstream.ip }}:{{ upstream.port }};
 }
 {% endfor %}
