@@ -1,10 +1,10 @@
 server {
-    server_name ~^www.{{ virtual.host }}$;
+    server_name www.{{ virtual.host }};
     listen 80;
     rewrite ^(.*) https://{{ virtual.host }}$1 permanent;
 }
 server {
-    server_name ~^{{ virtual.host }}$;
+    server_name {{ virtual.host }};
     listen 80;
     rewrite ^(.*) https://{{ virtual.host }}$1 permanent;
 }

@@ -1,5 +1,5 @@
 server {
-    server_name ~^www.{{ virtual.host }}$;
+    server_name www.{{ virtual.host }};
     listen 80;
     rewrite ^(.*) http://{{ virtual.host }}$1 permanent;
 }
